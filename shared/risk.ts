@@ -235,6 +235,8 @@ export function scoreToken(input: { chain: ChainInfo; address: string; security:
 /** Fetch both sources and score. Errors in one source degrade gracefully. */
 export async function scanToken(chain: ChainInfo, address: string, f?: typeof fetch): Promise<RiskReport> {
   const [sec, mkt] = await Promise.allSettled([fetchGoPlus(chain, address, f), fetchPairs(chain, address, f)]);
+  if (sec.status === 'rejected') console.warn('security source failed:', String(sec.reason));
+  if (mkt.status === 'rejected') console.warn('market source failed:', String(mkt.reason));
   return scoreToken({
     chain, address,
     security: sec.status === 'fulfilled' ? sec.value : null, securityError: sec.status === 'rejected',

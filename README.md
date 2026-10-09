@@ -11,7 +11,7 @@ This repo has two parts:
 | Part | Folder | Runs on | Status |
 |---|---|---|---|
 | Website + in-browser scanner | `site/` + `shared/` | GitHub Pages (static) | **Live** |
-| Backend: scanner API, MCP server, API keys + limits, checkout, payment matchers, alerts, magic-link login | `worker/` + `shared/` | Cloudflare Workers + D1 + KV + Cron | Code complete and typechecked; **not deployed** (needs a Cloudflare account) |
+| Backend: scanner API, MCP server, API keys + limits, checkout, payment matchers, alerts, magic-link login | `worker/` + `shared/` | Cloudflare Workers + D1 + KV + Cron | **Live** at https://tokenscope.jazzforbesbrowne48.workers.dev |
 
 `shared/` is used by both: the risk scoring engine (`risk.ts`), data fetchers (`data.ts`), chains and the payment addresses (`config.ts`), plans/prices/billing rules (`pricing.ts`), Solana Pay / EIP-681 helpers (`payments.ts`).
 
@@ -59,7 +59,15 @@ npm run build      # -> dist/
 
 Each check emits a finding `{severity, title, detail, source}`. Weights: critical 45, high 22, medium 10, low 4; positive signals subtract a little but can offset at most 30% of the risk weight, so they never hide a red flag. Any critical finding forces **high risk**. Levels: 0–14 low, 15–44 moderate, 45+ high. Tokens on GoPlus's trusted list (e.g. USDC) have issuer controls (mint, freeze, proxy) reported as info, not risk. Wording is always "high risk" with evidence. The engine never calls a token a scam.
 
-## Deploying the Worker to Cloudflare (later)
+## Live backend
+
+- Worker: https://tokenscope.jazzforbesbrowne48.workers.dev (`/api/health`, `/api/v1/scan`, `/mcp`, ...)
+- D1 `tokenscope` and KV `tokenscope-cache` (IDs in `worker/wrangler.toml`), migrations applied, 3 cron triggers active.
+- GitHub Actions variable `VITE_API_BASE` points the site's checkout at the Worker (live mode).
+- Wrangler 4 needs Node 22+.
+- Optional secrets still to add: `RESEND_API_KEY` (magic-link + receipts), `TELEGRAM_BOT_TOKEN` (bot + alerts), `GOPLUS_APP_KEY`/`GOPLUS_APP_SECRET` (GoPlus rate limits from shared Cloudflare IPs).
+
+## Deploying the Worker to Cloudflare
 
 ```bash
 cd worker

@@ -23,15 +23,23 @@ export interface DexPair {
 export type GoPlusEvm = Record<string, any>;
 export type GoPlusSolana = Record<string, any>;
 
-async function getJson<T>(url: string, fetcher: typeof fetch = fetch, timeoutMs = 12_000): Promise<T> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const res = await fetcher(url, { signal: ctrl.signal, headers: { accept: 'application/json' } });
-    if (!res.ok) throw new Error(`${new URL(url).host} returned ${res.status}`);
-    return (await res.json()) as T;
-  } finally { clearTimeout(t); }
+async function getJson<T>(url: string, fetcher: typeof fetch = fetch, timeoutMs = 12_000, retries = 2): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetcher(url, { signal: ctrl.signal, headers: { accept: 'application/json' } });
+      if ((res.status === 429 || res.status >= 500) && attempt < retries) { await sleep(500 * (attempt + 1) + Math.random() * 400); continue; }
+      if (!res.ok) throw new Error(`${new URL(url).host} returned ${res.status}`);
+      const body = (await res.json()) as T & { code?: number };
+      // GoPlus signals rate limits in the body (code 4029) with HTTP 200.
+      if (body && (body as any).code === 4029 && attempt < retries) { await sleep(700 * (attempt + 1) + Math.random() * 500); continue; }
+      return body;
+    } finally { clearTimeout(t); }
+  }
 }
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** All DEX pairs for a token on a chain, sorted by liquidity desc. */
 export async function fetchPairs(chain: ChainInfo, address: string, f?: typeof fetch): Promise<DexPair[]> {
@@ -73,6 +81,8 @@ export async function fetchGoPlus(chain: ChainInfo, address: string, f?: typeof 
     ? `${GOPLUS}/solana/token_security?contract_addresses=${address}`
     : `${GOPLUS}/token_security/${chain.goplus}?contract_addresses=${address}`;
   const res = await getJson<{ code: number; message: string; result: Record<string, any> | null }>(url, f);
+  // code 1 = OK. Other codes (e.g. rate limits) are errors, not "token unknown".
+  if (res.code !== 1) throw new Error(`GoPlus error ${res.code}: ${res.message}`);
   if (!res.result) return null;
   const key = Object.keys(res.result).find((k) => k.toLowerCase() === address.toLowerCase());
   return key ? res.result[key] : null;

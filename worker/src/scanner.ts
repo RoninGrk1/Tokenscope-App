@@ -3,6 +3,7 @@ import { CHAINS, detectAddressKind, type ChainKey } from '../../shared/config';
 import { scanToken, type RiskReport } from '../../shared/risk';
 import { fetchLaunches, fetchPairs } from '../../shared/data';
 import { HttpError } from './util';
+import { upstreamFetch } from './goplus';
 
 const TTL = 60; // seconds
 
@@ -16,20 +17,31 @@ export function parseToken(chainRaw: unknown, addressRaw: unknown): { chain: Cha
   return { chain, address };
 }
 
-/** Scan with a short KV cache to protect upstream free APIs. */
+/**
+ * Scan with a short KV cache to protect upstream free APIs. A complete result is also kept as
+ * "last good" for 24h; if a fresh scan is degraded (upstream rate limit), the last good result
+ * (with its original generatedAt) is returned instead when it is under 6 hours old.
+ */
 export async function cachedScan(env: Env, chain: ChainKey, address: string): Promise<RiskReport> {
-  const key = `scan:${chain}:${chain === 'solana' ? address : address.toLowerCase()}`;
-  const hit = await env.CACHE.get<RiskReport>(key, 'json');
+  const id = `${chain}:${chain === 'solana' ? address : address.toLowerCase()}`;
+  const hit = await env.CACHE.get<RiskReport>(`scan:${id}`, 'json');
   if (hit) return hit;
-  const r = await scanToken(CHAINS[chain], address);
-  if (r.dataAvailable.market && r.dataAvailable.security) await env.CACHE.put(key, JSON.stringify(r), { expirationTtl: TTL });
+  const r = await scanToken(CHAINS[chain], address, upstreamFetch(env));
+  if (r.dataAvailable.market && r.dataAvailable.security) {
+    await env.CACHE.put(`scan:${id}`, JSON.stringify(r), { expirationTtl: TTL });
+    await env.CACHE.put(`scan-good:${id}`, JSON.stringify(r), { expirationTtl: 86_400 });
+    return r;
+  }
+  const good = await env.CACHE.get<RiskReport>(`scan-good:${id}`, 'json');
+  if (good && Date.now() - Date.parse(good.generatedAt) < 6 * 3_600_000) return good;
+  if (!r.dataAvailable.market && !r.dataAvailable.security) throw new HttpError(503, 'Upstream data providers are rate-limiting right now. Please retry in a few seconds.', { retryAfter: 10 });
   return r;
 }
 
 export async function tokenInfo(env: Env, chain: ChainKey, address: string) {
   const key = `info:${chain}:${address}`;
   const hit = await env.CACHE.get(key, 'json'); if (hit) return hit;
-  const pairs = await fetchPairs(CHAINS[chain], address);
+  const pairs = await fetchPairs(CHAINS[chain], address, upstreamFetch(env));
   const base = pairs.find((p) => p.baseToken.address.toLowerCase() === address.toLowerCase());
   const info = {
     chain, address, name: base?.baseToken.name ?? null, symbol: base?.baseToken.symbol ?? null,

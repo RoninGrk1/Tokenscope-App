@@ -25,7 +25,7 @@ export async function startMagicLink(env: Env, emailRaw: string): Promise<void> 
   if (!EMAIL_RE.test(email)) throw new HttpError(400, 'Invalid email');
   const token = randomId('', 24);
   await env.DB.prepare('INSERT INTO magic_links (token_hash, email, expires_at) VALUES (?, ?, ?)').bind(await sha256Hex(token), email, now() + MAGIC_TTL).run();
-  const link = `${env.APP_URL}/api/auth/verify?token=${token}`;
+  const link = `${env.API_URL}/api/auth/verify?token=${token}`;
   await sendEmail(env, email, 'Your Tokenscope sign-in link', `Sign in to Tokenscope:\n\n${link}\n\nThis link expires in 15 minutes. If you didn't request it, ignore this email.`);
 }
 
@@ -37,7 +37,7 @@ export async function verifyMagicLink(env: Env, token: string): Promise<{ cookie
   const user = await findOrCreateUser(env, row.email);
   const sid = randomId('', 24);
   await env.DB.prepare('INSERT INTO sessions (id_hash, user_id, expires_at) VALUES (?, ?, ?)').bind(await sha256Hex(sid), user.id, now() + SESSION_TTL).run();
-  return { user, cookie: `ts_session=${sid}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_TTL / 1000}` };
+  return { user, cookie: `ts_session=${sid}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${SESSION_TTL / 1000}` };
 }
 
 export async function sessionUser(env: Env, req: Request): Promise<User | null> {

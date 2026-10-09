@@ -4,6 +4,7 @@ export interface Env {
   DB: D1Database;
   CACHE: KVNamespace;
   APP_URL: string;
+  API_URL: string;
   ALLOWED_ORIGINS: string;
   ETH_RECEIVING_ADDRESS: string;
   SOL_RECEIVING_ADDRESS: string;
@@ -16,6 +17,8 @@ export interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   ADMIN_TOKEN?: string;
+  GOPLUS_APP_KEY?: string;
+  GOPLUS_APP_SECRET?: string;
 }
 
 /**

@@ -2,11 +2,15 @@
 # Deploy: see ../README.md ("Deploying the Worker to Cloudflare").
 name = "tokenscope"
 main = "src/index.ts"
-compatibility_date = "2024-10-22"
+compatibility_date = "2025-09-01"
+workers_dev = true
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-APP_URL = "https://tokenscope.pages.dev"
+# Public website (GitHub Pages for now). Used in emails, alerts and redirects.
+APP_URL = "https://roningrk1.github.io/Tokenscope-App"
+# This Worker's own public URL (magic-link verification lands here).
+API_URL = "https://tokenscope.jazzforbesbrowne48.workers.dev"
 # Comma-separated origins allowed to call the API from a browser.
 ALLOWED_ORIGINS = "https://tokenscope.pages.dev,https://roningrk1.github.io,http://localhost:5173"
 # PUBLIC receiving addresses only. Never put private keys or seed phrases anywhere.
@@ -20,17 +24,18 @@ ETH_CONFIRMATIONS = "12"
 PAYMENT_GRACE_MINUTES = "120"
 EMAIL_FROM = "Tokenscope <noreply@tokenscope.pages.dev>"
 # Secrets (set with `wrangler secret put NAME`):
-#   RESEND_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, ADMIN_TOKEN
+#   RESEND_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, ADMIN_TOKEN,
+#   GOPLUS_APP_KEY, GOPLUS_APP_SECRET (optional; avoids GoPlus rate limits on shared Cloudflare IPs)
 
 [[d1_databases]]
 binding = "DB"
 database_name = "tokenscope"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "b94bdd28-98c5-4549-9bab-48f1f4bead24"
 migrations_dir = "migrations"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "0a548cfedd9141b98422c4b1050976d2"
 
 [triggers]
 # every minute: payment matching + invoice expiry
