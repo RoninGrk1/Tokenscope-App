@@ -1,0 +1,39 @@
+# Tokenscope backend: scanner API, MCP server, checkout, alerts.
+# Deploy: see ../README.md ("Deploying the Worker to Cloudflare").
+name = "tokenscope"
+main = "src/index.ts"
+compatibility_date = "2024-10-22"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+APP_URL = "https://tokenscope.pages.dev"
+# Comma-separated origins allowed to call the API from a browser.
+ALLOWED_ORIGINS = "https://tokenscope.pages.dev,https://roningrk1.github.io,http://localhost:5173"
+# PUBLIC receiving addresses only. Never put private keys or seed phrases anywhere.
+# The Worker refuses to run checkout if these differ from shared/config.ts.
+ETH_RECEIVING_ADDRESS = "0xeeb8269Df3767b4889414161F89B7a63Cdf2B50c"
+SOL_RECEIVING_ADDRESS = "2Hn8PPimz48DmbHj8Ap6QsUFT2CXzwq6fQxWH9zJHve7"
+ETH_RPC_URL = "https://ethereum-rpc.publicnode.com"
+SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com"
+ETH_CONFIRMATIONS = "12"
+# Accept exact-amount payments that land up to this long after an invoice expires.
+PAYMENT_GRACE_MINUTES = "120"
+EMAIL_FROM = "Tokenscope <noreply@tokenscope.pages.dev>"
+# Secrets (set with `wrangler secret put NAME`):
+#   RESEND_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, ADMIN_TOKEN
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tokenscope"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[triggers]
+# every minute: payment matching + invoice expiry
+# every 10 minutes: watch/alert worker
+# daily 09:00 UTC: expiry reminders
+crons = ["* * * * *", "*/10 * * * *", "0 9 * * *"]

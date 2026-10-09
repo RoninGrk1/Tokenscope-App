@@ -1,0 +1,23 @@
+{
+  "name": "tokenscope-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/postbuild.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx scripts/verify.ts", "smoke": "tsx scripts/smoke.ts"
+  },
+  "devDependencies": {
+    "@noble/hashes": "^2.4.0",
+    "@types/qrcode": "^1.5.6",
+    "tsx": "^4.23.15",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}
