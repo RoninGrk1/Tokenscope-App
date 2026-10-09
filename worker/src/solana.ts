@@ -1,3 +1,4 @@
+import { solRpc } from './env';
 import type { Env } from './env';
 import { rpc } from './rpc';
 import { now } from './util';
@@ -13,10 +14,10 @@ interface TokenBal { accountIndex: number; mint: string; owner?: string; uiToken
  */
 export async function matchSolanaInvoice(env: Env, inv: InvoiceRow): Promise<boolean> {
   if (!inv.reference) return false;
-  const sigs = await rpc<{ signature: string; err: unknown }[]>(env.SOLANA_RPC_URL, 'getSignaturesForAddress', [inv.reference, { limit: 10, commitment: 'finalized' }]);
+  const sigs = await rpc<{ signature: string; err: unknown }[]>(solRpc(env), 'getSignaturesForAddress', [inv.reference, { limit: 10, commitment: 'finalized' }]);
   for (const s of sigs) {
     if (s.err) continue;
-    const tx = await rpc<any>(env.SOLANA_RPC_URL, 'getTransaction', [s.signature, { commitment: 'finalized', maxSupportedTransactionVersion: 0, encoding: 'jsonParsed' }]);
+    const tx = await rpc<any>(solRpc(env), 'getTransaction', [s.signature, { commitment: 'finalized', maxSupportedTransactionVersion: 0, encoding: 'jsonParsed' }]);
     if (!tx || tx.meta?.err) continue;
     if (tx.blockTime && tx.blockTime * 1000 < inv.created_at - 60_000) continue;
     const pre: TokenBal[] = tx.meta.preTokenBalances ?? [];
@@ -41,5 +42,6 @@ export async function runSolanaMatcher(env: Env) {
     .bind(now() - grace).all<InvoiceRow>();
   for (const inv of results) {
     try { await matchSolanaInvoice(env, inv); } catch (e) { console.error('solana match', inv.id, e); }
+    await new Promise((r) => setTimeout(r, 250)); // pace public RPC
   }
 }

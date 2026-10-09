@@ -18,6 +18,9 @@ export interface Env {
   TELEGRAM_WEBHOOK_SECRET?: string;
   ADMIN_TOKEN?: string;
   GOPLUS_APP_KEY?: string;
+  /** Optional secret RPC URLs (e.g. Helius / Alchemy with API key). Take precedence over the public vars. */
+  SOLANA_RPC_PRIVATE_URL?: string;
+  ETH_RPC_PRIVATE_URL?: string;
   GOPLUS_APP_SECRET?: string;
 }
 
@@ -28,3 +31,6 @@ export interface Env {
 export function receivingAddressesOk(env: Env): boolean {
   return env.ETH_RECEIVING_ADDRESS === RECEIVING.ethereum && env.SOL_RECEIVING_ADDRESS === RECEIVING.solana;
 }
+
+export const solRpc = (env: Env) => env.SOLANA_RPC_PRIVATE_URL || env.SOLANA_RPC_URL;
+export const ethRpc = (env: Env) => env.ETH_RPC_PRIVATE_URL || env.ETH_RPC_URL;

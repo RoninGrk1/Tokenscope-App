@@ -65,7 +65,7 @@ Each check emits a finding `{severity, title, detail, source}`. Weights: critica
 - D1 `tokenscope` and KV `tokenscope-cache` (IDs in `worker/wrangler.toml`), migrations applied, 3 cron triggers active.
 - GitHub Actions variable `VITE_API_BASE` points the site's checkout at the Worker (live mode).
 - Wrangler 4 needs Node 22+.
-- Optional secrets still to add: `RESEND_API_KEY` (magic-link + receipts), `TELEGRAM_BOT_TOKEN` (bot + alerts), `GOPLUS_APP_KEY`/`GOPLUS_APP_SECRET` (GoPlus rate limits from shared Cloudflare IPs).
+- Secrets still to add: `SOLANA_RPC_PRIVATE_URL` (**needed for Solana payment matching**: public Solana RPCs block/rate-limit Cloudflare IPs; a free Helius key works), `RESEND_API_KEY` (magic-link + receipts), `TELEGRAM_BOT_TOKEN` (bot + alerts), `GOPLUS_APP_KEY`/`GOPLUS_APP_SECRET` (GoPlus rate limits from shared Cloudflare IPs). Set with `npx wrangler secret put NAME`.
 
 ## Deploying the Worker to Cloudflare
 

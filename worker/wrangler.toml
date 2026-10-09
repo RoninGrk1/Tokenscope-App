@@ -18,7 +18,8 @@ ALLOWED_ORIGINS = "https://tokenscope.pages.dev,https://roningrk1.github.io,http
 ETH_RECEIVING_ADDRESS = "0xeeb8269Df3767b4889414161F89B7a63Cdf2B50c"
 SOL_RECEIVING_ADDRESS = "2Hn8PPimz48DmbHj8Ap6QsUFT2CXzwq6fQxWH9zJHve7"
 ETH_RPC_URL = "https://ethereum-rpc.publicnode.com"
-SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com"
+# api.mainnet-beta.solana.com returns 403 to Cloudflare Workers; PublicNode works.
+SOLANA_RPC_URL = "https://solana-rpc.publicnode.com"
 ETH_CONFIRMATIONS = "12"
 # Accept exact-amount payments that land up to this long after an invoice expires.
 PAYMENT_GRACE_MINUTES = "120"
@@ -26,6 +27,8 @@ EMAIL_FROM = "Tokenscope <noreply@tokenscope.pages.dev>"
 # Secrets (set with `wrangler secret put NAME`):
 #   RESEND_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, ADMIN_TOKEN,
 #   GOPLUS_APP_KEY, GOPLUS_APP_SECRET (optional; avoids GoPlus rate limits on shared Cloudflare IPs)
+#   SOLANA_RPC_PRIVATE_URL (recommended: keyed RPC, e.g. Helius; public RPCs rate-limit Cloudflare IPs)
+#   ETH_RPC_PRIVATE_URL (optional)
 
 [[d1_databases]]
 binding = "DB"

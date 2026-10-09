@@ -1,3 +1,4 @@
+import { ethRpc } from './env';
 import type { Env } from './env';
 import { rpc } from './rpc';
 import { getCursor, now, setCursor } from './util';
@@ -13,7 +14,7 @@ const MAX_RANGE = 500;
 interface Log { address: string; topics: string[]; data: string; blockNumber: string; transactionHash: string; removed?: boolean }
 
 async function blockTime(env: Env, block: string, cache: Map<string, number>): Promise<number> {
-  if (!cache.has(block)) { const b = await rpc<{ timestamp: string }>(env.ETH_RPC_URL, 'eth_getBlockByNumber', [block, false]); cache.set(block, parseInt(b.timestamp, 16) * 1000); }
+  if (!cache.has(block)) { const b = await rpc<{ timestamp: string }>(ethRpc(env), 'eth_getBlockByNumber', [block, false]); cache.set(block, parseInt(b.timestamp, 16) * 1000); }
   return cache.get(block)!;
 }
 
@@ -24,13 +25,13 @@ function candidateWindow(env: Env) { return now() - Number(env.PAYMENT_GRACE_MIN
  * and match each exact amount to an open invoice created before the transfer.
  */
 export async function runEthereumMatcher(env: Env) {
-  const latest = parseInt(await rpc<string>(env.ETH_RPC_URL, 'eth_blockNumber', []), 16);
+  const latest = parseInt(await rpc<string>(ethRpc(env), 'eth_blockNumber', []), 16);
   const safe = latest - Number(env.ETH_CONFIRMATIONS);
   const cur = await getCursor(env, 'eth_last_block');
   const from = cur ? Number(cur) + 1 : safe - 50;
   if (from > safe) return;
   const to = Math.min(safe, from + MAX_RANGE - 1);
-  const logs = await rpc<Log[]>(env.ETH_RPC_URL, 'eth_getLogs', [{ address: USDC.ethereum.address, topics: [TRANSFER_TOPIC, null, pad(env.ETH_RECEIVING_ADDRESS)], fromBlock: hex(from), toBlock: hex(to) }]);
+  const logs = await rpc<Log[]>(ethRpc(env), 'eth_getLogs', [{ address: USDC.ethereum.address, topics: [TRANSFER_TOPIC, null, pad(env.ETH_RECEIVING_ADDRESS)], fromBlock: hex(from), toBlock: hex(to) }]);
   const times = new Map<string, number>();
   for (const log of logs) {
     if (log.removed) continue;
@@ -51,7 +52,7 @@ export async function runEthereumMatcher(env: Env) {
 /** Speed path: the customer pastes a tx hash. Returns the resulting invoice status. */
 export async function verifyEthTx(env: Env, inv: InvoiceRow, txHash: string): Promise<'paid' | 'confirming' | 'invalid'> {
   if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) return 'invalid';
-  const receipt = await rpc<{ status: string; blockNumber: string; logs: Log[] } | null>(env.ETH_RPC_URL, 'eth_getTransactionReceipt', [txHash]);
+  const receipt = await rpc<{ status: string; blockNumber: string; logs: Log[] } | null>(ethRpc(env), 'eth_getTransactionReceipt', [txHash]);
   if (!receipt) { await markConfirming(env, inv, txHash); return 'confirming'; }
   if (receipt.status !== '0x1') return 'invalid';
   const log = receipt.logs.find((l) => l.address.toLowerCase() === USDC.ethereum.address.toLowerCase() && l.topics[0] === TRANSFER_TOPIC
@@ -59,7 +60,7 @@ export async function verifyEthTx(env: Env, inv: InvoiceRow, txHash: string): Pr
   if (!log) return 'invalid';
   const ts = await blockTime(env, receipt.blockNumber, new Map());
   if (ts < inv.created_at - 60_000) return 'invalid';
-  const latest = parseInt(await rpc<string>(env.ETH_RPC_URL, 'eth_blockNumber', []), 16);
+  const latest = parseInt(await rpc<string>(ethRpc(env), 'eth_blockNumber', []), 16);
   if (latest - parseInt(receipt.blockNumber, 16) < Number(env.ETH_CONFIRMATIONS)) { await markConfirming(env, inv, txHash); return 'confirming'; }
   await activateInvoice(env, inv, { txHash, payer: topicAddr(log.topics[1]), amountUnits: BigInt(log.data), blockRef: `block:${parseInt(receipt.blockNumber, 16)}` });
   return 'paid';
